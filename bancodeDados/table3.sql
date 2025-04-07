@@ -1,0 +1,7 @@
+CREATE TABLE sub_itens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    item_id INT NOT NULL,
+    nome VARCHAR(255) NOT NULL,
+    link VARCHAR(255),
+    FOREIGN KEY (item_id) REFERENCES itens(id) ON DELETE CASCADE
+);
