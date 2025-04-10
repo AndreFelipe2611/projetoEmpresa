@@ -1,8 +1,12 @@
 <?php
 $pdo = new PDO('mysql:host=localhost;dbname=analistacsc;charset=utf8mb4', 'root', 'afvm2611');
 
+// PEGAR TODAS AS CATEGORIAS
+$stmt = $pdo->query("SELECT * FROM categorias ORDER BY nome");
+$categoriasDb = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 // PEGAR TODOS OS ITENS
-$stmt = $pdo->query("SELECT * FROM itens ORDER BY categoria, nome");
+$stmt = $pdo->query("SELECT * FROM itens ORDER BY nome");
 $itens = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // PEGAR TODOS OS SUBITENS
@@ -16,10 +20,19 @@ foreach ($subitens as $sub) {
 }
 
 // ORGANIZAR ITENS POR CATEGORIA
-$categorias = ['controles' => [], 'ferramentas' => [], 'acessos' => []];
+$categorias = [];
+foreach ($categoriasDb as $cat) {
+    $categorias[$cat['id']] = [
+        'nome' => $cat['nome'],
+        'itens' => []
+    ];
+}
+
 foreach ($itens as $item) {
     $item['sub_itens'] = $mapaSubitens[$item['id']] ?? [];
-    $categorias[$item['categoria']][] = $item;
+    if (isset($categorias[$item['categoria_id']])) {
+        $categorias[$item['categoria_id']]['itens'][] = $item;
+    }
 }
 ?>
 
@@ -34,13 +47,11 @@ foreach ($itens as $item) {
 <div class="container">
     <h1>🚀 ANALISTA CSC 🚀</h1>
     <div class="sections">
-        <?php foreach ($categorias as $categoria => $itens): ?>
-            <div class="section <?= $categoria ?>">
-                <h2>
-                    <?= $categoria === 'controles' ? '🔥 CONTROLES 🔥' : ($categoria === 'ferramentas' ? '🛠️ FERRAMENTAS 🛠️' : '🔑 ACESSOS 🔑') ?>
-                </h2>
+        <?php foreach ($categorias as $cat_id => $cat): ?>
+            <div class="section">
+                <h2><?= htmlspecialchars($cat['nome']) ?></h2>
                 <ul>
-                    <?php foreach ($itens as $item): ?>
+                    <?php foreach ($cat['itens'] as $item): ?>
                         <li>
                             <?php if (!empty($item['link'])): ?>
                                 <a href="<?= htmlspecialchars($item['link']) ?>" target="_blank"><?= htmlspecialchars($item['nome']) ?></a>

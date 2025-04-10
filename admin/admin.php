@@ -1,19 +1,28 @@
 <?php
 $pdo = new PDO('mysql:host=localhost;dbname=analistacsc;charset=utf8mb4', 'root', 'afvm2611');
 
+// ADICIONAR CATEGORIA
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['novaCategoria'])) {
+    $novaCategoria = trim($_POST['novaCategoria']);
+    if (!empty($novaCategoria)) {
+        $stmt = $pdo->prepare("INSERT INTO categorias (nome) VALUES (?)");
+        $stmt->execute([$novaCategoria]);
+    }
+    header("Location: admin.php");
+    exit;
+}
+
 // ADICIONAR ITEM
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['novoItem'])) {
-    $categoria = $_POST['categoria'];
+    $categoria_id = intval($_POST['categoria_id']);
     $nome = trim($_POST['novoItem']);
     $link = trim($_POST['link']);
 
     if (!empty($nome)) {
-        // Inserir o item principal
-        $stmt = $pdo->prepare("INSERT INTO itens (categoria, nome, link) VALUES (?, ?, ?)");
-        $stmt->execute([$categoria, $nome, $link]);
+        $stmt = $pdo->prepare("INSERT INTO itens (categoria_id, nome, link) VALUES (?, ?, ?)");
+        $stmt->execute([$categoria_id, $nome, $link]);
         $item_id = $pdo->lastInsertId();
 
-        // Inserir os subitens na tabela separada
         if (!empty($_POST['sub_nome'])) {
             foreach ($_POST['sub_nome'] as $i => $sub_nome) {
                 $sub_nome = trim($sub_nome);
@@ -34,13 +43,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['novoItem'])) {
 if (isset($_GET['excluir'])) {
     $id = intval($_GET['excluir']);
     $pdo->prepare("DELETE FROM itens WHERE id = ?")->execute([$id]);
-    // subitens serão excluídos automaticamente se tiver ON DELETE
     header("Location: admin.php");
     exit;
 }
 
+// PEGAR CATEGORIAS
+$stmt = $pdo->query("SELECT * FROM categorias ORDER BY nome");
+$categoriasDb = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$categorias = [];
+foreach ($categoriasDb as $cat) {
+    $categorias[$cat['id']] = [
+        'nome' => $cat['nome'],
+        'itens' => []
+    ];
+}
+
 // PEGAR ITENS
-$stmt = $pdo->query("SELECT * FROM itens ORDER BY categoria, nome");
+$stmt = $pdo->query("SELECT * FROM itens ORDER BY nome");
 $itens = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // PEGAR SUBITENS
@@ -54,10 +73,11 @@ foreach ($subitens as $sub) {
 }
 
 // Agrupar itens por categoria
-$categorias = ['controles' => [], 'ferramentas' => [], 'acessos' => []];
 foreach ($itens as $item) {
     $item['sub_itens'] = $mapaSubitens[$item['id']] ?? [];
-    $categorias[$item['categoria']][] = $item;
+    if (isset($categorias[$item['categoria_id']])) {
+        $categorias[$item['categoria_id']]['itens'][] = $item;
+    }
 }
 ?>
 
@@ -72,16 +92,26 @@ foreach ($itens as $item) {
 <div class="container">
     <h1>⚙️ Admin - ANALISTA CSC</h1>
 
+    <!-- Adicionar Categoria -->
+    <form method="POST" class="admin-form">
+        <label>Nova Categoria:</label>
+        <input type="text" name="novaCategoria" placeholder="Ex: 📂 NOVA CATEGORIA" required>
+        <button type="submit">➕ Criar Categoria</button>
+    </form>
+
+    <hr><br>
+
+    <!-- Adicionar Item -->
     <form method="POST" class="admin-form">
         <label>Categoria:</label>
-        <select name="categoria">
-            <option value="controles">🔥 CONTROLES</option>
-            <option value="ferramentas">🛠️ FERRAMENTAS</option>
-            <option value="acessos">🔑 ACESSOS</option>
+        <select name="categoria_id" required>
+            <?php foreach ($categoriasDb as $cat): ?>
+                <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['nome']) ?></option>
+            <?php endforeach; ?>
         </select><br><br>
 
         <label>Nome do Item:</label>
-        <input type="text" name="novoItem" placeholder="Ex: 📋 Novo Controle" required>
+        <input type="text" name="novoItem" placeholder="Ex: 📋 Novo Item" required>
 
         <label>Link do Item:</label>
         <input type="text" name="link" placeholder="https://...">
@@ -98,15 +128,16 @@ foreach ($itens as $item) {
             <input type="text" name="sub_link[]" placeholder="Link 3">
         </fieldset>
 
-        <button type="submit">➕ Adicionar</button>
+        <button type="submit">➕ Adicionar Item</button>
     </form>
 
     <hr><br>
 
-    <?php foreach ($categorias as $cat => $lista): ?>
-        <h2><?= strtoupper($cat) ?></h2>
+    <!-- Exibir Itens -->
+    <?php foreach ($categorias as $cat): ?>
+        <h2><?= htmlspecialchars($cat['nome']) ?></h2>
         <ul>
-            <?php foreach ($lista as $item): ?>
+            <?php foreach ($cat['itens'] as $item): ?>
                 <li>
                     <?php if ($item['link']): ?>
                         <a href="<?= htmlspecialchars($item['link']) ?>" target="_blank">
