@@ -40,9 +40,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['novoItem'])) {
 }
 
 // EXCLUIR ITEM
-if (isset($_GET['excluir'])) {
-    $id = intval($_GET['excluir']);
+if (isset($_GET['excluir_item'])) {
+    $id = intval($_GET['excluir_item']);
+
+    $pdo->prepare("DELETE FROM sub_itens WHERE item_id = ?")->execute([$id]);
     $pdo->prepare("DELETE FROM itens WHERE id = ?")->execute([$id]);
+
+    header("Location: admin.php");
+    exit;
+}
+
+// EXCLUIR CATEGORIA
+if (isset($_GET['excluir_categoria'])) {
+    $categoriaId = intval($_GET['excluir_categoria']);
+
+    $stmt = $pdo->prepare("SELECT id FROM itens WHERE categoria_id = ?");
+    $stmt->execute([$categoriaId]);
+    $itemIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    if (!empty($itemIds)) {
+        $in = str_repeat('?,', count($itemIds) - 1) . '?';
+        $pdo->prepare("DELETE FROM sub_itens WHERE item_id IN ($in)")->execute($itemIds);
+        $pdo->prepare("DELETE FROM itens WHERE id IN ($in)")->execute($itemIds);
+    }
+
+    $pdo->prepare("DELETE FROM categorias WHERE id = ?")->execute([$categoriaId]);
+
     header("Location: admin.php");
     exit;
 }
@@ -66,13 +89,11 @@ $itens = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $stmtSub = $pdo->query("SELECT * FROM sub_itens ORDER BY item_id, nome");
 $subitens = $stmtSub->fetchAll(PDO::FETCH_ASSOC);
 
-// Agrupar subitens por item_id
 $mapaSubitens = [];
 foreach ($subitens as $sub) {
     $mapaSubitens[$sub['item_id']][] = $sub;
 }
 
-// Agrupar itens por categoria
 foreach ($itens as $item) {
     $item['sub_itens'] = $mapaSubitens[$item['id']] ?? [];
     if (isset($categorias[$item['categoria_id']])) {
@@ -134,8 +155,11 @@ foreach ($itens as $item) {
     <hr><br>
 
     <!-- Exibir Itens -->
-    <?php foreach ($categorias as $cat): ?>
-        <h2><?= htmlspecialchars($cat['nome']) ?></h2>
+    <?php foreach ($categorias as $catId => $cat): ?>
+        <h2>
+            <?= htmlspecialchars($cat['nome']) ?>
+            <a href="?excluir_categoria=<?= $catId ?>">[Excluir Categoria]</a>
+        </h2>
         <ul>
             <?php foreach ($cat['itens'] as $item): ?>
                 <li>
@@ -147,7 +171,7 @@ foreach ($itens as $item) {
                         <?= htmlspecialchars($item['nome']) ?>
                     <?php endif; ?>
 
-                    <a href="?excluir=<?= $item['id'] ?>" style="color:red;">[Excluir]</a>
+                    <a href="?excluir_item=<?= $item['id'] ?>">[Excluir]</a>
 
                     <?php if (!empty($item['sub_itens'])): ?>
                         <ul>
@@ -169,8 +193,8 @@ foreach ($itens as $item) {
         </ul>
     <?php endforeach; ?>
 
-    <div style="margin-top: 30px;">
-        <a href="../index.php" style="color: yellow;">⬅️ Voltar para Página Principal</a>
+    <div>
+        <a href="../index.php">⬅️ Voltar para Página Principal</a>
     </div>
 </div>
 </body>
