@@ -12,11 +12,12 @@ body {
     align-items: center;
     height: 100vh;
     color: white;
+    padding: 20px;
 }
 
 .container {
-    width: 90%;
-    max-width: 1200px;
+    width: 100%;
+    max-width: 1400px;
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
     padding: 30px;
@@ -31,42 +32,34 @@ h1 {
     text-transform: uppercase;
     font-weight: bold;
     text-shadow: 3px 3px 5px rgba(0, 0, 0, 0.5);
+    margin-bottom: 30px;
 }
 
 .sections {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* GRADE 4x4 */
+    gap: 20px;
 }
 
 .section {
-    width: 30%;
+    background: rgba(255, 255, 255, 0.1);
     padding: 20px;
     border-radius: 15px;
     box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.3);
     transition: transform 0.3s ease-in-out;
+    text-align: left;
 }
 
 .section:hover {
     transform: scale(1.05);
 }
 
-.controles {
-    background: linear-gradient(135deg, #ff7eb3, #ff758c);
-}
-
-.ferramentas {
-    background: linear-gradient(135deg, #6a11cb, #2575fc);
-}
-
-.acessos {
-    background: linear-gradient(135deg, #ffcc00, #ff9900);
-}
-
-h2 {
+.section h2 {
     font-size: 20px;
     margin-bottom: 15px;
     text-transform: uppercase;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding-bottom: 5px;
 }
 
 ul {
@@ -95,7 +88,6 @@ li:hover {
     transform: translateX(5px);
 }
 
-/* Links para manter os itens clicáveis */
 li a {
     text-decoration: none;
     color: white;
@@ -105,12 +97,12 @@ li a {
     padding: 10px 0;
 }
 
-/* Botões dentro dos itens alinhados ao centro */
 .button-group {
     display: flex;
     gap: 10px;
     justify-content: center;
     margin-top: 5px;
+    flex-wrap: wrap;
 }
 
 button {
@@ -139,3 +131,4 @@ button:hover {
         transform: translateY(0);
     }
 }
+    

@@ -42,10 +42,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['novoItem'])) {
 // EXCLUIR ITEM
 if (isset($_GET['excluir_item'])) {
     $id = intval($_GET['excluir_item']);
-
     $pdo->prepare("DELETE FROM sub_itens WHERE item_id = ?")->execute([$id]);
     $pdo->prepare("DELETE FROM itens WHERE id = ?")->execute([$id]);
-
     header("Location: admin.php");
     exit;
 }
@@ -65,33 +63,31 @@ if (isset($_GET['excluir_categoria'])) {
     }
 
     $pdo->prepare("DELETE FROM categorias WHERE id = ?")->execute([$categoriaId]);
-
     header("Location: admin.php");
     exit;
 }
 
-// PEGAR CATEGORIAS
+// PEGAR CATEGORIAS, ITENS E SUBITENS
 $stmt = $pdo->query("SELECT * FROM categorias ORDER BY nome");
 $categoriasDb = $stmt->fetchAll(PDO::FETCH_ASSOC);
-$categorias = [];
-foreach ($categoriasDb as $cat) {
-    $categorias[$cat['id']] = [
-        'nome' => $cat['nome'],
-        'itens' => []
-    ];
-}
 
-// PEGAR ITENS
 $stmt = $pdo->query("SELECT * FROM itens ORDER BY nome");
 $itens = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// PEGAR SUBITENS
 $stmtSub = $pdo->query("SELECT * FROM sub_itens ORDER BY item_id, nome");
 $subitens = $stmtSub->fetchAll(PDO::FETCH_ASSOC);
 
 $mapaSubitens = [];
 foreach ($subitens as $sub) {
     $mapaSubitens[$sub['item_id']][] = $sub;
+}
+
+$categorias = [];
+foreach ($categoriasDb as $cat) {
+    $categorias[$cat['id']] = [
+        'nome' => $cat['nome'],
+        'itens' => []
+    ];
 }
 
 foreach ($itens as $item) {
@@ -113,7 +109,6 @@ foreach ($itens as $item) {
 <div class="container">
     <h1>⚙️ Admin - ANALISTA CSC</h1>
 
-    <!-- Adicionar Categoria -->
     <form method="POST" class="admin-form">
         <label>Nova Categoria:</label>
         <input type="text" name="novaCategoria" placeholder="Ex: 📂 NOVA CATEGORIA" required>
@@ -122,7 +117,6 @@ foreach ($itens as $item) {
 
     <hr><br>
 
-    <!-- Adicionar Item -->
     <form method="POST" class="admin-form">
         <label>Categoria:</label>
         <select name="categoria_id" required>
@@ -141,10 +135,8 @@ foreach ($itens as $item) {
             <legend>Subitens</legend>
             <input type="text" name="sub_nome[]" placeholder="Subitem 1">
             <input type="text" name="sub_link[]" placeholder="Link 1"><br>
-
             <input type="text" name="sub_nome[]" placeholder="Subitem 2">
             <input type="text" name="sub_link[]" placeholder="Link 2"><br>
-
             <input type="text" name="sub_nome[]" placeholder="Subitem 3">
             <input type="text" name="sub_link[]" placeholder="Link 3">
         </fieldset>
@@ -154,46 +146,51 @@ foreach ($itens as $item) {
 
     <hr><br>
 
-    <!-- Exibir Itens -->
-    <?php foreach ($categorias as $catId => $cat): ?>
-        <h2>
-            <?= htmlspecialchars($cat['nome']) ?>
-            <a href="?excluir_categoria=<?= $catId ?>">[Excluir Categoria]</a>
-        </h2>
-        <ul>
-            <?php foreach ($cat['itens'] as $item): ?>
-                <li>
-                    <?php if ($item['link']): ?>
-                        <a href="<?= htmlspecialchars($item['link']) ?>" target="_blank">
-                            <?= htmlspecialchars($item['nome']) ?>
-                        </a>
-                    <?php else: ?>
-                        <?= htmlspecialchars($item['nome']) ?>
-                    <?php endif; ?>
+    <div class="sections">
+        <?php foreach ($categorias as $catId => $cat): ?>
+            <div class="section">
+                <h2>
+                    <?= htmlspecialchars($cat['nome']) ?>
+                    <a href="?excluir_categoria=<?= $catId ?>" style="float:right; font-size: 14px;">[X]</a>
+                </h2>
+                <ul>
+                    <?php foreach ($cat['itens'] as $item): ?>
+                        <li>
+                            <?php if ($item['link']): ?>
+                                <a href="<?= htmlspecialchars($item['link']) ?>" target="_blank">
+                                    <?= htmlspecialchars($item['nome']) ?>
+                                </a>
+                            <?php else: ?>
+                                <?= htmlspecialchars($item['nome']) ?>
+                            <?php endif; ?>
 
-                    <a href="?excluir_item=<?= $item['id'] ?>">[Excluir]</a>
+                            <div class="button-group">
+                                <a href="?excluir_item=<?= $item['id'] ?>">🗑 Excluir</a>
+                            </div>
 
-                    <?php if (!empty($item['sub_itens'])): ?>
-                        <ul>
-                            <?php foreach ($item['sub_itens'] as $sub): ?>
-                                <li>
-                                    <?php if ($sub['link']): ?>
-                                        <a href="<?= htmlspecialchars($sub['link']) ?>" target="_blank">
-                                            - <?= htmlspecialchars($sub['nome']) ?>
-                                        </a>
-                                    <?php else: ?>
-                                        - <?= htmlspecialchars($sub['nome']) ?>
-                                    <?php endif; ?>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-                    <?php endif; ?>
-                </li>
-            <?php endforeach; ?>
-        </ul>
-    <?php endforeach; ?>
+                            <?php if (!empty($item['sub_itens'])): ?>
+                                <ul>
+                                    <?php foreach ($item['sub_itens'] as $sub): ?>
+                                        <li style="background: rgba(255,255,255,0.15); font-size: 14px;">
+                                            <?php if ($sub['link']): ?>
+                                                <a href="<?= htmlspecialchars($sub['link']) ?>" target="_blank">
+                                                    - <?= htmlspecialchars($sub['nome']) ?>
+                                                </a>
+                                            <?php else: ?>
+                                                - <?= htmlspecialchars($sub['nome']) ?>
+                                            <?php endif; ?>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            <?php endif; ?>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        <?php endforeach; ?>
+    </div>
 
-    <div>
+    <div style="margin-top: 30px;">
         <a href="../index.php">⬅️ Voltar para Página Principal</a>
     </div>
 </div>
