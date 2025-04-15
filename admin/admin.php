@@ -4,15 +4,16 @@ $pdo = new PDO('mysql:host=localhost;dbname=analistacsc;charset=utf8mb4', 'root'
 // ADICIONAR CATEGORIA
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['novaCategoria'])) {
     $novaCategoria = trim($_POST['novaCategoria']);
+    $cor = $_POST['cor'] ?? '#ffffff';
     if (!empty($novaCategoria)) {
-        $stmt = $pdo->prepare("INSERT INTO categorias (nome) VALUES (?)");
-        $stmt->execute([$novaCategoria]);
+        $stmt = $pdo->prepare("INSERT INTO categorias (nome, cor) VALUES (?, ?)");
+        $stmt->execute([$novaCategoria, $cor]);
     }
     header("Location: admin.php");
     exit;
 }
 
-// ADICIONAR ITEM
+// RESTANTE DOS PROCESSOS IGUAIS A ANTES
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['novoItem'])) {
     $categoria_id = intval($_POST['categoria_id']);
     $nome = trim($_POST['novoItem']);
@@ -39,7 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['novoItem'])) {
     exit;
 }
 
-// EXCLUIR ITEM
 if (isset($_GET['excluir_item'])) {
     $id = intval($_GET['excluir_item']);
     $pdo->prepare("DELETE FROM sub_itens WHERE item_id = ?")->execute([$id]);
@@ -48,10 +48,8 @@ if (isset($_GET['excluir_item'])) {
     exit;
 }
 
-// EXCLUIR CATEGORIA
 if (isset($_GET['excluir_categoria'])) {
     $categoriaId = intval($_GET['excluir_categoria']);
-
     $stmt = $pdo->prepare("SELECT id FROM itens WHERE categoria_id = ?");
     $stmt->execute([$categoriaId]);
     $itemIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -67,7 +65,7 @@ if (isset($_GET['excluir_categoria'])) {
     exit;
 }
 
-// PEGAR CATEGORIAS, ITENS E SUBITENS
+// BUSCAR DADOS
 $stmt = $pdo->query("SELECT * FROM categorias ORDER BY nome");
 $categoriasDb = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -86,6 +84,7 @@ $categorias = [];
 foreach ($categoriasDb as $cat) {
     $categorias[$cat['id']] = [
         'nome' => $cat['nome'],
+        'cor' => $cat['cor'] ?? '#ffffff',
         'itens' => []
     ];
 }
@@ -112,6 +111,10 @@ foreach ($itens as $item) {
     <form method="POST" class="admin-form">
         <label>Nova Categoria:</label>
         <input type="text" name="novaCategoria" placeholder="Ex: 📂 NOVA CATEGORIA" required>
+
+        <label>Cor da Categoria:</label>
+        <input type="color" name="cor" value="#ffffff">
+
         <button type="submit">➕ Criar Categoria</button>
     </form>
 
@@ -148,7 +151,7 @@ foreach ($itens as $item) {
 
     <div class="sections">
         <?php foreach ($categorias as $catId => $cat): ?>
-            <div class="section">
+            <div class="section" style="border-left: 10px solid <?= htmlspecialchars($cat['cor']) ?>;">
                 <h2>
                     <?= htmlspecialchars($cat['nome']) ?>
                     <a href="?excluir_categoria=<?= $catId ?>" style="float:right; font-size: 14px;">[X]</a>
