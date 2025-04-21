@@ -1,75 +1,10 @@
 <?php
 $pdo = new PDO('mysql:host=localhost;dbname=analistacsc;charset=utf8mb4', 'root', 'afvm2611');
 
-// ADICIONAR CATEGORIA
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['novaCategoria'])) {
-    $novaCategoria = trim($_POST['novaCategoria']);
-    $cor = $_POST['cor'] ?? '#ffffff';
-    if (!empty($novaCategoria)) {
-        $stmt = $pdo->prepare("INSERT INTO categorias (nome, cor) VALUES (?, ?)");
-        $stmt->execute([$novaCategoria, $cor]);
-    }
-    header("Location: admin.php");
-    exit;
-}
-
-// RESTANTE DOS PROCESSOS IGUAIS A ANTES
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['novoItem'])) {
-    $categoria_id = intval($_POST['categoria_id']);
-    $nome = trim($_POST['novoItem']);
-    $link = trim($_POST['link']);
-
-    if (!empty($nome)) {
-        $stmt = $pdo->prepare("INSERT INTO itens (categoria_id, nome, link) VALUES (?, ?, ?)");
-        $stmt->execute([$categoria_id, $nome, $link]);
-        $item_id = $pdo->lastInsertId();
-
-        if (!empty($_POST['sub_nome'])) {
-            foreach ($_POST['sub_nome'] as $i => $sub_nome) {
-                $sub_nome = trim($sub_nome);
-                $sub_link = trim($_POST['sub_link'][$i] ?? '');
-                if (!empty($sub_nome)) {
-                    $stmtSub = $pdo->prepare("INSERT INTO sub_itens (item_id, nome, link) VALUES (?, ?, ?)");
-                    $stmtSub->execute([$item_id, $sub_nome, $sub_link]);
-                }
-            }
-        }
-    }
-
-    header("Location: admin.php");
-    exit;
-}
-
-if (isset($_GET['excluir_item'])) {
-    $id = intval($_GET['excluir_item']);
-    $pdo->prepare("DELETE FROM sub_itens WHERE item_id = ?")->execute([$id]);
-    $pdo->prepare("DELETE FROM itens WHERE id = ?")->execute([$id]);
-    header("Location: admin.php");
-    exit;
-}
-
-if (isset($_GET['excluir_categoria'])) {
-    $categoriaId = intval($_GET['excluir_categoria']);
-    $stmt = $pdo->prepare("SELECT id FROM itens WHERE categoria_id = ?");
-    $stmt->execute([$categoriaId]);
-    $itemIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
-    if (!empty($itemIds)) {
-        $in = str_repeat('?,', count($itemIds) - 1) . '?';
-        $pdo->prepare("DELETE FROM sub_itens WHERE item_id IN ($in)")->execute($itemIds);
-        $pdo->prepare("DELETE FROM itens WHERE id IN ($in)")->execute($itemIds);
-    }
-
-    $pdo->prepare("DELETE FROM categorias WHERE id = ?")->execute([$categoriaId]);
-    header("Location: admin.php");
-    exit;
-}
-
-// BUSCAR DADOS
-$stmt = $pdo->query("SELECT * FROM categorias ORDER BY nome");
+$stmt = $pdo->query("SELECT * FROM categorias ORDER BY id ASC");
 $categoriasDb = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$stmt = $pdo->query("SELECT * FROM itens ORDER BY nome");
+$stmt = $pdo->query("SELECT * FROM itens ORDER BY id ASC");
 $itens = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $stmtSub = $pdo->query("SELECT * FROM sub_itens ORDER BY item_id, nome");
@@ -102,13 +37,13 @@ foreach ($itens as $item) {
 <head>
     <meta charset="UTF-8">
     <title>Admin - ANALISTA CSC</title>
-    <link rel="stylesheet" href="./admin.css">
+    <link rel="stylesheet" href="admin.css">
 </head>
 <body>
 <div class="container">
     <h1>⚙️ Admin - ANALISTA CSC</h1>
 
-    <form method="POST" class="admin-form">
+    <form id="formCategoria" class="admin-form">
         <label>Nova Categoria:</label>
         <input type="text" name="novaCategoria" placeholder="Ex: 📂 NOVA CATEGORIA" required>
 
@@ -120,7 +55,7 @@ foreach ($itens as $item) {
 
     <hr><br>
 
-    <form method="POST" class="admin-form">
+    <form id="formItem" class="admin-form">
         <label>Categoria:</label>
         <select name="categoria_id" required>
             <?php foreach ($categoriasDb as $cat): ?>
@@ -154,7 +89,7 @@ foreach ($itens as $item) {
             <div class="section" style="border-left: 10px solid <?= htmlspecialchars($cat['cor']) ?>;">
                 <h2>
                     <?= htmlspecialchars($cat['nome']) ?>
-                    <a href="?excluir_categoria=<?= $catId ?>" style="float:right; font-size: 14px;">[X]</a>
+                    <a href="#" onclick="excluirCategoria(<?= $catId ?>, this)" style="float:right; font-size: 14px;">[X]</a>
                 </h2>
                 <ul>
                     <?php foreach ($cat['itens'] as $item): ?>
@@ -166,11 +101,9 @@ foreach ($itens as $item) {
                             <?php else: ?>
                                 <?= htmlspecialchars($item['nome']) ?>
                             <?php endif; ?>
-
                             <div class="button-group">
-                                <a href="?excluir_item=<?= $item['id'] ?>">🗑 Excluir</a>
+                                <a href="#" onclick="excluirItem(<?= $item['id'] ?>, this)">🗑 Excluir</a>
                             </div>
-
                             <?php if (!empty($item['sub_itens'])): ?>
                                 <ul>
                                     <?php foreach ($item['sub_itens'] as $sub): ?>
@@ -197,5 +130,107 @@ foreach ($itens as $item) {
         <a href="../index.php">⬅️ Voltar para Página Principal</a>
     </div>
 </div>
+
+<!-- MODAL DE LOGIN -->
+<div id="loginModal" class="modal">
+    <div class="modal-content">
+        <h2>🔐 Acesso Restrito</h2>
+        <input type="text" id="loginUser" placeholder="Usuário">
+        <input type="password" id="loginPass" placeholder="Senha">
+        <button onclick="validarLogin()">Entrar</button>
+        <p id="loginError">Usuário ou senha incorretos.</p>
+    </div>
+</div>
+
+<script>
+    function validarLogin() {
+        const user = document.getElementById('loginUser').value;
+        const pass = document.getElementById('loginPass').value;
+        const errorMsg = document.getElementById('loginError');
+
+        if (user === 'admin' && pass === 'adm1234') {
+            document.getElementById('loginModal').style.display = 'none';
+        } else {
+            errorMsg.style.display = 'block';
+        }
+    }
+
+    window.onload = () => {
+        document.getElementById('loginModal').style.display = 'flex';
+    };
+
+    document.getElementById('formCategoria').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const response = await fetch('admin-handler.php', {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            const data = result.data;
+            alert('Categoria adicionada!');
+            this.reset();
+
+            const novaHTML = `
+                <div class="section" style="border-left: 10px solid ${data.cor};">
+                    <h2>${data.nome} <a href="#" onclick="excluirCategoria(${data.id}, this)" style="float:right;">[X]</a></h2>
+                    <ul></ul>
+                </div>
+            `;
+            document.querySelector('.sections').insertAdjacentHTML('beforeend', novaHTML);
+        } else {
+            alert('Erro ao adicionar categoria.');
+        }
+    });
+
+    document.getElementById('formItem').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const response = await fetch('admin-handler.php', {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            const data = result.data;
+            alert('Item adicionado!');
+            this.reset();
+
+            const sections = document.querySelectorAll('.sections .section');
+            const targetSection = sections[data.categoria_id - 1]?.querySelector('ul');
+            const novoItem = `
+                <li>
+                    ${data.link ? `<a href="${data.link}" target="_blank">${data.nome}</a>` : data.nome}
+                    <div class="button-group">
+                        <a href="#" onclick="excluirItem(${data.id}, this)">🗑 Excluir</a>
+                    </div>
+                </li>
+            `;
+            if (targetSection) {
+                targetSection.insertAdjacentHTML('beforeend', novoItem);
+            }
+        } else {
+            alert('Erro ao adicionar item.');
+        }
+    });
+
+    // EXCLUSÕES SEM CONFIRM
+    function excluirCategoria(id, linkRef) {
+        fetch(`admin-handler.php?excluir_categoria=${id}`)
+            .then(() => {
+                linkRef.closest('.section').remove();
+            });
+    }
+
+    function excluirItem(id, linkRef) {
+        fetch(`admin-handler.php?excluir_item=${id}`)
+            .then(() => {
+                linkRef.closest('li').remove();
+            });
+    }
+</script>
 </body>
 </html>
