@@ -97,10 +97,8 @@ li:hover {
 li a {
     text-decoration: none;
     color: white;
-    display: block;
-    width: 100%;
     text-align: center;
-    padding: 10px 0;
+   
 }
 
 .button-group {
@@ -174,11 +172,6 @@ li a {
     .section {
         width: 100%;
         padding: 15px;
-    }
-
-    li {
-        font-size: 14px;
-        padding: 8px;
     }
 
     .button-group {
