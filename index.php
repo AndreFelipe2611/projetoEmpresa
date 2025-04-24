@@ -1,14 +1,14 @@
 <?php
 $pdo = new PDO('mysql:host=localhost;dbname=analistacsc;charset=utf8mb4', 'root', 'afvm2611');
 
-// Buscar dados
-$stmt = $pdo->query("SELECT * FROM categorias ORDER BY nome");
+// Buscar dados em ordem de inserção (por ID)
+$stmt = $pdo->query("SELECT * FROM categorias ORDER BY id ASC");
 $categorias = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$stmt = $pdo->query("SELECT * FROM itens ORDER BY nome");
+$stmt = $pdo->query("SELECT * FROM itens ORDER BY id ASC");
 $itens = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$stmt = $pdo->query("SELECT * FROM sub_itens ORDER BY item_id, nome");
+$stmt = $pdo->query("SELECT * FROM sub_itens ORDER BY item_id, id ASC");
 $subitens = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Organizar subitens
@@ -46,7 +46,7 @@ foreach ($itens as $item) {
 </head>
 <body>
 <div class="container">
-    <h1>📊 ANALISTA CSC</h1>
+<h1><a href="./admin/admin.php">📊 ANALISTA CSC</a></h1>
 
     <div class="sections">
         <?php foreach ($mapaCategorias as $categoria): ?>

@@ -48,6 +48,34 @@ if (isset($_POST['novoItem'])) {
     }
 }
 
+// Editar Categoria
+if (isset($_GET['editar_categoria'])) {
+    $id = intval($_GET['editar_categoria']);
+    $data = json_decode(file_get_contents("php://input"), true);
+    $nome = trim($data['nome']);
+    $cor = $data['cor'] ?? '#ffffff';
+
+    $stmt = $pdo->prepare("UPDATE categorias SET nome = ?, cor = ? WHERE id = ?");
+    $stmt->execute([$nome, $cor, $id]);
+
+    echo json_encode(['status' => 'success']);
+    exit;
+}
+
+// Editar Item
+if (isset($_GET['editar_item'])) {
+    $id = intval($_GET['editar_item']);
+    $data = json_decode(file_get_contents("php://input"), true);
+    $nome = trim($data['nome']);
+    $link = trim($data['link']);
+
+    $stmt = $pdo->prepare("UPDATE itens SET nome = ?, link = ? WHERE id = ?");
+    $stmt->execute([$nome, $link, $id]);
+
+    echo json_encode(['status' => 'success']);
+    exit;
+}
+
 // Excluir Categoria
 if (isset($_GET['excluir_categoria'])) {
     $id = intval($_GET['excluir_categoria']);
