@@ -9,7 +9,7 @@
     $stmt = $pdo->query("SELECT * FROM itens ORDER BY id ASC");
     $itens = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Buscar sub_itens (nome correto da tabela!)
+    // Buscar sub_itens 
     $stmtSub = $pdo->query("SELECT * FROM sub_itens ORDER BY item_id, nome");
     $subitens = $stmtSub->fetchAll(PDO::FETCH_ASSOC);
 
