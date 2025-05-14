@@ -1,0 +1,21 @@
+CREATE TABLE categorias (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    cor VARCHAR(10)
+);
+
+CREATE TABLE itens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_categoria INT NOT NULL,
+    nome VARCHAR(255) NOT NULL,
+    link VARCHAR(255),
+    FOREIGN KEY (id_categoria) REFERENCES categorias(id) ON DELETE CASCADE
+);
+
+CREATE TABLE subitens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_item INT NOT NULL,
+    nome VARCHAR(255) NOT NULL,
+    link VARCHAR(255),
+    FOREIGN KEY (id_item) REFERENCES itens(id) ON DELETE CASCADE
+);
